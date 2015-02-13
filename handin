@@ -1,0 +1,72 @@
+--****************************MACHINE LEARNING 2015 PRACTICAL ASSIGNMENT 1***************************--
+--***********************************TRINITY TERM 2015*******WEEK 2**********************************--
+
+
+--****SECTION 1. "NOT FOR HAND-IN"*******************************************************************--
+-- 1. Why is the 'local' keyword important?
+
+--    The 'local' keyword is important when defining functions because Lua makes variables global by
+-- default; one needs to pay attention to how each variable is used. This also applies to functions.
+
+
+--**************************************************************************************************--
+-- 2. What is the difference between a.f() and a:f()?
+
+--    a:f(), unlike a.f(), also adds self as an argument, which may thereafter be used within the
+-- definition of the function to allow access to other class variables.
+
+
+--**************************************************************************************************--
+-- 3. What does require do, and why do we sometimes capture its return value but sometimes not?
+
+--    require is used as the standard way to include modules (i.e. other files), acting like it
+-- wrapped them within a function body, making their local variables invisible outside; doing so
+-- runs the modules themselves. Requiring a file runs the file and makes its functions available
+-- normally; as suggested, one may want to capture its return value to make it local, to prevent
+-- naming conflicts from occurring.
+
+
+--**************************************************************************************************--
+-- 4. What is the Lua equivalent of a list object? of a dictionary? How do you iterate over each
+-- of these?
+
+--    In Lua, one uses tables as both lists and dictionaries, which are key-value stores. Through a
+-- table with keys one can iterate with a generic for loop; the same goes for lists, noting that a
+-- Lua list will be a table with consecutive integer keys, through which one can iterate with a
+-- standard integer-indexed for loop starting at 1 (not at 0).
+
+
+--**************************************************************************************************--
+
+--************** HAND-IN ***************************************************************************--
+
+-- 1. Very briefly, assuming we have defined
+	local t = torch.Tensor({{1,2,3},{4,5,6},{7,8,9}})
+-- list 3 expressions that can replace the first line below to slice (extract) the middle column:
+	local col       = t:narrow(2,2,1) --narrow dimension 2 (height) from index 2 to index 2+1-1=2
+	local col_prime = t:select(2,2)   --tensor of dimension 1 (one less), at index 2 in dimension 2
+	local col_dprime= t:index(2,torch.LongTensor{2}) -- using a different storage!
+	print(col)	   --should print the 1-d tensor: 2,5,8 -- and, indeed, does.
+	print(col_prime)   --also prints 2,5,8; this and the above print it vertically.
+	print(col_dprime)  --also prints 2,5,8, as expected; also prints vertically.
+
+	-- REMARK. For col = t:narrow(2,2,1), Lua states that it is a tensor of dimension 3x1, and for
+	--             col_prime=t:select(2,2), it states that it is a tensor of dimension 3, so they
+	-- 	       are different objects (although isomorphic).
+
+	-- other ways of doing it:
+	print(t:sub(1,-1,2,2)) -- apparently does narrowing as well
+	local transposed = t:transpose(1,2) -- or the "convenience" t() method
+	print(transposed[2])   -- mathematically equivalent
+
+--**************************************************************************************************--
+-- 2. What is the difference between a Tensor and a Storage?
+
+--    A Storage, as defined in the Torch documentation, is a way for Lua to access the memory of a
+-- pointer or array, or to map the contents of a file to memory. A Tensor represents a mathematical
+-- object, a (potentially) multi-dimensional matrix, a class used to handle numeric data, as opposed
+-- to an array of basic types which contains the actual data (the Storage containing its memory).
+
+--    Equivalently, we may think as a Tensor as interpreting the chunk of memory in a Storage as having
+-- dimensions.
+
