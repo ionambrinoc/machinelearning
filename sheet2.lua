@@ -38,4 +38,4 @@ for epoch = 1,epochs do
 	end
 	Y = Yt:t()								--transpose back
 end
-print(X*Y)	-- result
+print((X*Y)[7][6])	-- result
