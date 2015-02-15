@@ -18,8 +18,9 @@ torch.manualSeed(1)    -- fix random seed so program runs the same every time
 -- NOTE: see below for optimState, storing optimiser settings
 local opt = {}         -- these options are used throughout
 opt.optimization = 'sgd'
-opt.batch_size = 5
-opt.train_size = 8000  -- set to 0 or 60000 to use all 60000 training data
+opt.batch_size = 500
+opt.train_size = 60000  -- set to 0 or 60000 to use all 60000 training data
+local epochs = 100        -- number of full passes over all the training data
 opt.test_size = 0      -- 0 means load all data
 
 local optimState
@@ -158,7 +159,6 @@ end
 
 local counter = 0
 
-local epochs = 10  -- number of full passes over all the training data
 local losses = {}
 test_losses = {} --*
 local epoch_loss = 0  
@@ -172,6 +172,7 @@ for epoch = 1, epochs do
     epoch_loss = epoch_loss + minibatch_loss[1]
   end
 
+  --compress loss function to make graphs look nice
   losses[#losses+1] = epoch_loss/(train.data:size(1)/ opt.batch_size)
 
   -- now evaluate test set performance
@@ -195,7 +196,7 @@ gnuplot.plot({
   '-'}, {
   torch.range(1, #test_losses),        
   torch.Tensor(test_losses),           
-  '~'})
+  '-'})
 
 ------------------------------------------------------------------------------
 -- TESTING THE LEARNED MODEL
