@@ -69,7 +69,7 @@ for i = 1,(#data)[1] do
    local myPrediction = model:forward(data[i][{{2,3}}])
    print(string.format("%2d  %6.2f %6.2f", i, myPrediction[1], text[i]))
 end
---**************************************************************************************************--
+
 --************** HAND-IN ***************************************************************************--
 
 -- Question 2: testing the trained model on new set:	   -- predictions:
@@ -83,24 +83,22 @@ for i=1,(#dataTest)[1] do 				   -- 1e3 epochs: 23.21   1.8392     -0.24
    local prediction = model:forward(dataTest[i][{{1,2}}])  -- 1e4 epochs: 31.63   1.1146     0.6676
    print(string.format("%2d  %6.2f", i, prediction[1]))    -- 1e5 epochs: 31.98   1.11       0.64
 end
-
 --**************************************************************************************************--
 
 --Question 3: least squares solution - no optimization here, just using formula & data provided
-
 y = data:narrow(2,1,1) --slice first column, then rest of it, and construct biased data Tensor
 X = torch.cat(torch.ones((#data)[1],1),data:narrow(2,2,2))   -- by adding bias column (ones)
 XT= X:transpose(1,2)					     -- swap width (1) and height (2)
 
 biasedDataTest = torch.cat(torch.ones((#dataTest)[1],1), dataTest)
-print(biasedDataTest)			-- also add bias column to test data        PREDICTION OUTPUTS:
-										    --       1. 40.32
-print('LSParams')				-- print out parameters 	    --       2. 44.03
-LSParams = (torch.inverse(XT * X))*XT*y						    --       3. 49.96
+print(biasedDataTest)			-- also add bias column to test data    PREDICTION OUTPUTS:
+										--       1. 40.32
+print('LSParams')				-- print out parameters 	--       2. 44.03
+LSParams = (torch.inverse(XT * X))*XT*y						--       3. 49.96
 print(LSParams)
 					-- predict by tensor multiplication
-LSPredictions = biasedDataTest * LSParams					-- bias insecticide fertilizer
-print(LSPredictions)					-- resulting parameters:   31.98     1.11      0.65
+LSPredictions = biasedDataTest * LSParams			       --bias insecticide fertilizer
+print(LSPredictions)				-- resulting parameters: 31.98     1.11      0.65
 
 -- note convergence as number of epochs increases to the prediction given by the least squares model
 
@@ -111,12 +109,11 @@ require 'optim'
 require 'nn'
 require 'gnuplot'         -- plot outputs as well
 
---***DATA GENERATION********************************************************************************--
+								--***DATA GENERATION****************--
 -- quadratic polynomial for data generation: f(x,y) = a + bx + cx^2; in one variable to make it easy
-a = 2; b = -3; c = 1 -- set generation parameters here                                      to plot.
-nTrain = 1000       -- set number of training instances
-nTest  = 50
-data = torch.Tensor(nTrain,1); labels = torch.Tensor(nTrain,1);      --training set
+a = 2; b = -3; c = 1 	      -- set generation parameters here                               to plot.
+nTrain = 1000;nTest  = 50     -- set number of training & testing instances
+data = torch.Tensor(nTrain,1); labels = torch.Tensor(nTrain,1);         --training set
 testData = torch.Tensor(nTest,1); testLabels = torch.Tensor(nTest,1);   --testing set
 
 for i=1,nTrain do
@@ -131,9 +128,8 @@ for i=1,nTest do
    testData[i][1] = x
    testLabels[i][1]=a + b*x+c*x*x+noise
 end
-
---***SOLUTION TO PROBLEM STARTS HERE****************************************************************--
-local function quadphi(x)        -- quadratic basis function
+								--***SOLUTION TO PROBLEM STARTS HERE--
+local function quadphi(x)        -- quadratic basis function;
    return torch.Tensor{1,x,x*x}
 end
 local function cubephi(x)        -- cubic basis function
@@ -143,10 +139,9 @@ local function quartphi(x)       -- quartic basis function
    return torch.Tensor{1,x,x*x,x*x*x,x*x*x*x}
 end
 
-local quadPhi = torch.Tensor(nTrain,3) --extract features using
+local quadPhi = torch.Tensor(nTrain,3)  --extract features using
 local cubePhi = torch.Tensor(nTrain,4)  --the phi functions
 local quartPhi = torch.Tensor(nTrain,5)
-
 for i=1,nTrain do
    local phirow = quadphi(data[i][1])
    for j=1,3 do
@@ -165,7 +160,7 @@ end
 local regularizerQuad = torch.mul(torch.eye(3),0.0001) --regularize
 local regularizerCube = torch.mul(torch.eye(4),0.0001)
 local regularizerQuar = torch.mul(torch.eye(5),0.0001)
-
+								--transformed training data
 local thetaQuad  = torch.inverse(((quadPhi:t())*quadPhi)+regularizerQuad)*(quadPhi:t())*labels
 local thetaCube  = torch.inverse(((cubePhi:t())*cubePhi)+regularizerCube)*(cubePhi:t())*labels
 local thetaQuart = torch.inverse(((quartPhi:t())*quartPhi)+regularizerQuar)*(quartPhi:t())*labels
@@ -175,9 +170,8 @@ biasedDataTest = torch.cat(torch.ones((#testData)[1],1), testData) --and to test
 XT=X:transpose(1,2)    --transpose X by swapping width (1) & height (2)
 LSParams = (torch.inverse(XT * X))*XT*labels --linear parameters
 
-local quadPhiTest = torch.Tensor(nTest,3)
-local cubePhiTest = torch.Tensor(nTest,4)
-local quartPhiTest = torch.Tensor(nTest,5)
+local quadPhiTest = torch.Tensor(nTest,3); local cubePhiTest = torch.Tensor(nTest,4)
+local quartPhiTest = torch.Tensor(nTest,5)	--transformed testing data
 
 for i=1,nTest do                                --apply basis functions to test data
    local phirow = quadphi(testData[i][1])    
@@ -194,10 +188,10 @@ for i=1,nTest do                                --apply basis functions to test 
    end
 end
 
-local quadPred = quadPhiTest * thetaQuad   --quadratic model
-local cubePred = cubePhiTest * thetaCube    --cubic model
-local quartPred= quartPhiTest* thetaQuart   --quartic model
-local LSPred  = biasedDataTest * LSParams       --linear model
+local quadPred = quadPhiTest * thetaQuad   --quadratic model     (FIRST IMAGE)
+local cubePred = cubePhiTest * thetaCube    --cubic model        (SECOND IMAGE)  
+local quartPred= quartPhiTest* thetaQuart   --quartic model      (THIRD IMAGE)
+local LSPred  = biasedDataTest * LSParams       --linear model   (FOURTH IMAGE)
 
 print("Linear model predictions")      |     print("Linear parameters")
 print(LSPred)                          |     print(LSParams)
@@ -209,9 +203,14 @@ print("Quartic model predictions")     |     print("Quartic parameters")
 print(quartPred)                       |     print(thetaQuart)
 print("Actual values")                 |
 print(testLabels)                      |
-
 gnuplot.plot({torch.cat(testData,quadPred),'+'}, {torch.cat(testData,testLabels), '+'})
 gnuplot.plot({torch.cat(testData,cubePred),'+'}, {torch.cat(testData,testLabels), '+'})
 gnuplot.plot({torch.cat(testData,quartPred),'+'}, {torch.cat(testData,testLabels), '+'})
 gnuplot.plot({torch.cat(testData,LSPred),'+'}, {torch.cat(testData,testLabels), '+'})
 -- predictions in blue, actual values in green
+
+--example output parameters: BIAS (1)    x     x^2   x^3   x^4		--note that higher
+-- LINEAR: 			-5.78   3.04     			--degree polynomials
+-- QUADRATIC: 			1.974  -2.99  0.99			--closely approximate
+-- CUBIC:                       1.951  -2.96  0.99  0.01		--the generating
+-- QUARTIC:			1.839  -2.77  0.88  0.03  -0.002	--quadratic on [1,5].
