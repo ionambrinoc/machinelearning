@@ -1,0 +1,138 @@
+--****************************MACHINE LEARNING 2015 PRACTICAL ASSIGNMENT 4*************************--
+--***********************************TRINITY TERM 2015*******WEEK 7********************************--
+
+--****TASK 1**********Rectified quadratic unit********************************requ.lua*************--
+
+require 'nn'
+local ReQU = torch.class('nn.ReQU', 'nn.Module')
+
+function ReQU:updateOutput(input)			--just implemented formula in manual: (x>0)(*)x(*)x
+  self.output = torch.Tensor()
+  self.output:resizeAs(input):copy(input)
+  self.output:cmul(torch.gt(input,0):double()):cmul(input)
+  return self.output
+end -------------------------------------------------------------------------------------------------
+function ReQU:updateGradInput(input, gradOutput)       --derivative: gradInput = gradOutput * dz/dx
+  self.gradInput = torch.Tensor()					   --by chain rule, where z=0 if x<0 => dz/dx=0
+  self.gradInput:resizeAs(gradOutput):copy(gradOutput) --otherwise dz/dx = 2x; note gt is strict.
+  self.gradInput:cmul(torch.gt(input,0):double()):mul(2):cmul(input)
+  return self.gradInput 							   --note that loops are not used.
+end
+--*************************************************************************************************--
+--****TASK 2**********Gradient checking***************************************gradcheck.lua********--
+
+local create_model = require 'create_model'				-- loads reQU
+local opt = { nonlinearity_type = 'requ' }				-- SETTINGS
+
+local function checkgrad(f, g, x, eps)					--numerically check gradient of loss
+  local grad = g(x)										--compute true gradient  
+  local eps = eps or 1e-11								--compute numeric approximations to gradient
+  local grad_est = torch.DoubleTensor(grad:size())
+  for i = 1, grad:size(1) do 							-- (f is the scalar-valued function)
+    x[i]   = x[i] + eps 							    -- (input to f: 1d tensor)	
+    fplus  = f(x)
+    x[i]   = x[i] - 2*eps
+    grad_est[i] = (fplus+f(x))/(2*eps)					--f=fminus
+    x[i]   = x[i] + eps									--and reset x[i] to initial value.
+  end
+  														--compute symmetric relative gradient error
+  local diff = torch.norm(grad - grad_est) / torch.norm(grad + grad_est)
+  return diff, grad, grad_est			-- return difference, true gradient, and estimated gradient
+end				
+-----------------------------------------------------------------------------------------------------
+function fakedata(n)							  --fake data generation
+    local data = {}
+    data.inputs = torch.randn(n, 4)                     -- random standard normal distro for inputs
+    data.targets = torch.rand(n):mul(3):add(1):floor()  -- random integers from {1,2,3}
+    return data
+end
+torch.manualSeed(1) 							  -- generate fake data, then do the gradient check
+local data = fakedata(5)
+local model, criterion = create_model(opt)
+local parameters, gradParameters = model:getParameters()
+-----------------------------------------------------------------------------------------------------
+local f = function(x)								    -- returns loss(params)
+  if x ~= parameters then
+    parameters:copy(x)
+  end
+  return criterion:forward(model:forward(data.inputs), data.targets)
+end
+local g = function(x)									-- returns dloss(params)/dparams
+  if x ~= parameters then
+    parameters:copy(x)
+  end
+  gradParameters:zero()
+  local outputs = model:forward(data.inputs)
+  criterion:forward(outputs, data.targets)
+  model:backward(data.inputs, criterion:backward(outputs, data.targets))
+  return gradParameters
+end--------------------------------------------------------------------------------------------------
+												-- returns 1+72761*10^(-13) for eps=1e-7,
+local diff = checkgrad(f, g, parameters)		-- 1+728*10(-13) for eps=1e-9 & 1+7*10^(-13)	
+--****TASK 3**********ReQU unit testing********************************jacobiancheck.lua***********--
+print(diff)										-- for eps=1e-11; similar magnitude to epsilon
+require 'requ'						-- NOTE: Assumes input and output to module are 1-dimensional, 
+									-- i.e. doesn't test the module in mini-batch mode. 
+local function jacobian_wrt_input(module, x, eps)
+
+  local z = module:forward(x):clone()					--compute true Jacobian (rows=over outputs, 
+  local jac = torch.DoubleTensor(z:size(1), x:size(1))  --cols = over inputs, as in practical manual)
+  
+  local one_hot = torch.zeros(z:size())					--get true Jacobian, ROW BY ROW
+  for i = 1, z:size(1) do
+    one_hot[i] = 1
+    jac[i]:copy(module:backward(x, one_hot))
+    one_hot[i] = 0
+  end
+  
+  local jac_est = torch.DoubleTensor(z:size(1), x:size(1)) --finite-differences Jacobian, COL BY COL
+  for i = 1, x:size(1) do
+    x[i] = x[i] + eps
+    local z_plus = torch.DoubleTensor(z:size(1))
+    z_plus:copy(module:forward(x))
+    x[i] = x[i] - 2*eps
+    local z_minus = module:forward(x)   --copy because of buffered reader issue
+    jac_est[{{},i}]:copy(z_minus:mul(-1)):add(1, z_plus):div(2*eps) -- change eps to 2*eps & z to z-
+    x[i] = x[i] + eps								 --restore value of x
+  end
+
+  local abs_diff = (jac - jac_est):abs()             --compute (symmetric) relative error of gradient
+  return jac, jac_est, torch.mean(abs_diff), torch.min(abs_diff), torch.max(abs_diff)
+end
+
+torch.manualSeed(1)		  -- now test layer in isolation
+local requ = nn.ReQU()
+
+local x = torch.randn(10) -- random input to layer
+print(x)
+print(jacobian_wrt_input(requ, x, 1e-6))		--mean of absolute difference:6.73*10^(-12); very low
+
+--*************************************************************************************************--
+--****TASK 4**********Advanced questions***********************************************************--
+
+--  1. Explain why we initialize the bias to random numbers larger than 0. What happens if we
+-- initialize it to a value below zero? Does this affect our ability to train?
+
+--	Solution: Were we to initialize the bias to a value below zero, we would not only get a lot of 
+--  sparsity in the training data, but it would definitely affect the training by causing dz/dx, the
+--  "local" derivatives of the reQU units, to become 0, becoming an instance of vanishing gradients.
+
+--  2. Suppose we have a simple network of the shape (linear => sigmoid => linear => sigmoid =>...
+--																						=> linear)
+-- Write out the chain rule for computing the derivative of this network with respect to the
+-- parameters of the first linear layer. What can you say about the vanishing gradient problem using
+-- this expression?
+
+-- Solution: Let A_i the parameters for linear layer i. The gradient for sigmoid layers is just
+--           sigm(z)*sigm(-z), so the chain rule for the network is (S for sigmoid, L for linear):
+-- dLoss/dx = dLoss/dLn * dLn/dS(n-1) * dS(n-1)/dL(n-2) * ... * dS4/dL3 * dL3/dS2 * dS2/dL1 * dL1/dx
+--			= dLoss/dLn * (product over odd i of A_i) * (product of n/2 sigmoids of - & n/2 of +)
+
+--		   Hence the problem is pretty obvious: adding multiple sigmoids will increase the problem
+--		   of vanishing gradients, due to the large number of factors in the products; this affects
+--		   both tails of the sigmoids, since factors occur with both positive and negative arguments
+--		   and linear terms do nothing to compensate. This happens since sigmoids tend to remove
+--		   a large amount of information (whereas linear layers preserve information) by flattening
+--		   out both the peaks (high values) and the valleys (low values) of the inputs, and further
+--		   encourages the intuition that sigmoids should be used only as the last layer, just before
+--		   giving the classification result itself.
