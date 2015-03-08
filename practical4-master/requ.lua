@@ -3,7 +3,7 @@ require 'nn'
 local ReQU = torch.class('nn.ReQU', 'nn.Module')
 
 function ReQU:updateOutput(input)			--just implemented formula in manual: (x>0)(*)x(*)x
-  self.output = torch.Tensor()
+  --self.output = torch.Tensor()
   self.output:resizeAs(input):copy(input)
   self.output:cmul(torch.gt(input,0):double()):cmul(input)
   return self.output

@@ -14,7 +14,7 @@ local function checkgrad(f, g, x, eps)
     x[i]   = x[i] + eps
     fplus  = f(x)
     x[i]   = x[i] - 2*eps
-    grad_est[i] = (fplus+f(x))/(2*eps)
+    grad_est[i] = (fplus-f(x))/(2*eps)
     x[i]   = x[i] + eps									-- and reset x[i] to initial value.
   end
   
