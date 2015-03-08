@@ -17,10 +17,10 @@ torch.manualSeed(1)    -- fix random seed so program runs the same every time
 
 -- NOTE: see below for optimState, storing optimiser settings
 local opt = {}         -- these options are used throughout
-opt.optimization = 'sgd'
+opt.optimization = 'lbfgs'
 opt.batch_size = 500
-opt.train_size = 60000  -- set to 0 or 60000 to use all 60000 training data
-local epochs = 100        -- number of full passes over all the training data
+opt.train_size = 40000  -- set to 0 or 60000 to use all 60000 training data
+local epochs = 10        -- number of full passes over all the training data
 opt.test_size = 0      -- 0 means load all data
 
 local optimState

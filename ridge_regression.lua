@@ -8,8 +8,8 @@ require 'gnuplot'         -- plot outputs as well
 a = 2; b = -3; c = 1 -- set generation parameters here
 nTrain = 1000	     -- set number of training instances
 nTest  = 50
-data = torch.Tensor(nTrain,1); labels = torch.Tensor(nTrain,1); 
-testData = torch.Tensor(nTest,1); testLabels = torch.Tensor(nTest,1);
+data = torch.Tensor(nTrain,1); labels = torch.Tensor(nTrain,1); 		--training set
+testData = torch.Tensor(nTest,1); testLabels = torch.Tensor(nTest,1);   --testing set
 
 for i=1,nTrain do
 	local x = torch.uniform(1,5)
@@ -17,14 +17,12 @@ for i=1,nTrain do
 	data[i][1] = x
 	labels[i][1]=a + b*x+c*x*x+noise
 end
-
 for i=1,nTest do
 	local x = torch.uniform(1,5)
 	local noise = torch.normal(0,0.1) --add Gaussian noise; mean zero, variance 0.1
 	testData[i][1] = x
 	testLabels[i][1]=a + b*x+c*x*x+noise
 end
-
 
 local function quadphi(x)			-- quadratic basis function
 	return torch.Tensor{1,x,x*x}
@@ -117,8 +115,8 @@ print(thetaCube)
 print("Quartic parameters")
 print(thetaQuart)
 
-gnuplot.plot({torch.cat(testData,quadPred),'+'}, {torch.cat(testData,testLabels), '+'})
-gnuplot.plot({torch.cat(testData,cubePred),'+'}, {torch.cat(testData,testLabels), '+'})
+--gnuplot.plot({torch.cat(testData,quadPred),'+'}, {torch.cat(testData,testLabels), '+'})
+--gnuplot.plot({torch.cat(testData,cubePred),'+'}, {torch.cat(testData,testLabels), '+'})
 gnuplot.plot({torch.cat(testData,quartPred),'+'}, {torch.cat(testData,testLabels), '+'})
 gnuplot.plot({torch.cat(testData,LSPred),'+'}, {torch.cat(testData,testLabels), '+'})
 -- predictions in blue, actual values in green
